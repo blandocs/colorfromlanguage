@@ -28,6 +28,8 @@ from utils import decode_lookup, produce_minibatch_idxs, rgbim2lab,\
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 # standard bilstm
 class CaptionEncoder(nn.Module):
     def __init__(self, word_embedding_dim, hidden_dim, vocab_size, train_vocab_embeddings):
@@ -167,12 +169,12 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
 
         # for now just choose first caption
         input_captions = Variable(torch.from_numpy(\
-            input_captions_.astype('int32')).long().cuda())
+            input_captions_.astype('int32')).long().to(device))
         input_caption_lens = torch.from_numpy(\
-        input_lengths_.astype('int32')).long().cuda()
+        input_lengths_.astype('int32')).long().to(device)
 
-        input_ims = Variable(input_.float().cuda())
-        target = Variable(target.long()).cuda()
+        input_ims = Variable(input_.float().to(device))
+        target = Variable(target.long()).to(device)
 
         optimizer.zero_grad()
         output, _ = net(input_ims, input_captions, input_caption_lens)
@@ -247,12 +249,12 @@ def evaluate_attention_maps(minibatches, net, epoch, img_save_folder, save_every
         input_lengths_ = val_lengths[batch_start:batch_end]
 
         input_captions = Variable(torch.from_numpy(\
-            input_captions_.astype('int32')).long().cuda())
+            input_captions_.astype('int32')).long().to(device))
         input_caption_lens = torch.from_numpy(\
-            input_lengths_.astype('int32')).long().cuda()
+            input_lengths_.astype('int32')).long().to(device)
 
-        input_ims = Variable(input_.float().cuda())
-        target = Variable(target.long()).cuda()
+        input_ims = Variable(input_.float().to(device))
+        target = Variable(target.long()).to(device)
     
         output, output_maps = net(input_ims, input_captions, input_caption_lens)
 
@@ -311,12 +313,12 @@ def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
         input_lengths_ = val_lengths[batch_start:batch_end]
 
         input_captions = Variable(torch.from_numpy(\
-            input_captions_.astype('int32')).long().cuda())
+            input_captions_.astype('int32')).long().to(device))
         input_caption_lens = torch.from_numpy(\
-            input_lengths_.astype('int32')).long().cuda()
+            input_lengths_.astype('int32')).long().to(device)
 
-        input_ims = Variable(input_.float().cuda())
-        target = Variable(target.long()).cuda()
+        input_ims = Variable(input_.float().to(device))
+        target = Variable(target.long()).to(device)
     
         output, _ = net(input_ims, input_captions, input_caption_lens)
 
@@ -383,7 +385,7 @@ if __name__ == '__main__':
     lookup_enc = LookupEncode('./priors/full_lab_grid_10.npy')
     num_classes = lookup_enc.cc.shape[0]
 
-    cuda_cc = Variable(torch.from_numpy(lookup_enc.cc).float().cuda())
+    cuda_cc = Variable(torch.from_numpy(lookup_enc.cc).float().to(device))
 
     hfile = args.h5_file
     hf = h5.File(hfile, 'r')
@@ -394,14 +396,16 @@ if __name__ == '__main__':
     alpha = 1.
     gamma = 0.5
     gradient_prior_factor = Variable(torch.from_numpy(
-        prior_boosting('./priors/coco_priors_onehot_625.npy', alpha, gamma)).float().cuda())
+        prior_boosting('./priors/coco_priors_onehot_625.npy', alpha, gamma)).float().to(device))
     print ('rebalancing')
     loss_function = nn.CrossEntropyLoss(weight=gradient_prior_factor)
     vrev = dict((v,k) for (k,v) in train_vocab.items())          
     n_vocab = len(train_vocab)
 
     net = AutocolorizeResnet(n_vocab, train_vocab_embeddings=train_vocab_embeddings) # leave other stuff at default values
-    net.cuda()
+
+    net = nn.DataParallel(net)
+    net.to(device)
 
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
 
@@ -446,3 +450,4 @@ if __name__ == '__main__':
 
 
         
+
