@@ -16,6 +16,7 @@ import pudb
 import torch
 import torchvision
 import cv2
+import torch.nn as nn
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--max_images', default=None, type=int)
@@ -52,7 +53,11 @@ def build_model(args):
         name = 'layer%d' % (i + 1)
         layers.append(getattr(cnn, name))
     model = torch.nn.Sequential(*layers)
-    model.cuda()
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    model = nn.DataParallel(model)
+    model.to(device)   
     model.eval()
     return model
 
@@ -68,7 +73,8 @@ def run_batch(cur_batch, model):
     image_batch = np.concatenate(cur_batch, 0).astype(np.float32)
     image_batch = (image_batch / 255.0 - mean) / std
     image_batch = torch.FloatTensor(image_batch).cuda()
-    image_batch = torch.autograd.Variable(image_batch, volatile=True)
+    with torch.no_grad():
+        image_batch = torch.autograd.Variable(image_batch)
 
     feats = model(image_batch)
     feats = feats.data.cpu().clone().numpy()
@@ -115,3 +121,4 @@ def main(args):
 if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
+

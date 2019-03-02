@@ -9,7 +9,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 from collections import defaultdict, Counter
-import cPickle as pickle
+import pickle as pickle
 import h5py as h5
 import json
 import numpy as np
@@ -22,7 +22,6 @@ import argparse
 import scipy.ndimage.interpolation as sni
 from skimage import io, color
 from random import shuffle
-from itertools import izip
 from utils import decode_lookup, produce_minibatch_idxs, rgbim2lab,\
     enc_batch, prior_boosting, display, decode,init_modules,cvrgb2lab,\
     annealing, enc_batch_nnenc, LookupEncode, labim2rgb, error_metric, rmse_ab
@@ -81,7 +80,7 @@ class FilMedResBlock(nn.Module):
         super(FilMedResBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_dim, in_dim, kernel_size=1, padding=0)
         self.conv2 = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=stride, padding=1,
-		dilation=dilation) # bias=False? check what perez did
+        dilation=dilation) # bias=False? check what perez did
         self.bn2 = nn.BatchNorm2d(out_dim)
         self.film = FiLM()
         init_modules(self.modules())
@@ -98,7 +97,7 @@ class AutocolorizeResnet(nn.Module):
     def __init__(self, vocab_size, feature_dim=(512, 28, 28), d_hid=256, d_emb = 300, num_modules=4, num_classes=625, train_vocab_embeddings=None):
         super(AutocolorizeResnet, self).__init__()
         self.num_modules = num_modules
-	self.n_lstm_hidden = d_hid
+        self.n_lstm_hidden = d_hid
         self.block = FilMedResBlock
         self.in_dim = feature_dim[0]
         self.num_classes = num_classes
@@ -115,38 +114,38 @@ class AutocolorizeResnet(nn.Module):
         self.mod3 = self.block(self.in_dim, self.in_dim, dilations[2])
         self.mod4 = self.block(self.in_dim, self.in_dim, dilations[3])
 
-	# put this in a loop later # there's an *2 because of bilstm and because of film
-	self.dense_film_1 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2) 
-	self.dense_film_2 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
-	self.dense_film_3 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
-	# out = x # 2x512x28x28
-	# out = F.relu(self.conv1(out)) # 2x512x28x28
-	self.dense_film_4 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
-	self.upsample = nn.Upsample(scale_factor=2, mode='bilinear')
+        # put this in a loop later # there's an *2 because of bilstm and because of film
+        self.dense_film_1 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2) 
+        self.dense_film_2 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
+        self.dense_film_3 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
+        # out = x # 2x512x28x28
+        # out = F.relu(self.conv1(out)) # 2x512x28x28
+        self.dense_film_4 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
+        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear')
 
-        self.classifier = nn.Conv2d(512, self.num_classes, kernel_size=1, stride=1, dilation=1)	
+        self.classifier = nn.Conv2d(512, self.num_classes, kernel_size=1, stride=1, dilation=1) 
 
 
     def forward(self, x, captions, caption_lens):
-	caption_features = self.caption_encoder(captions, caption_lens)
-        # out = F.relu(self.bn1(self.conv1(x)))
+        caption_features = self.caption_encoder(captions, caption_lens)
+            # out = F.relu(self.bn1(self.conv1(x)))
 
-	dense_film_1 = self.dense_film_1(caption_features)
-	dense_film_2 = self.dense_film_2(caption_features)
-	dense_film_3 = self.dense_film_3(caption_features)
-	dense_film_4 = self.dense_film_4(caption_features) # bsz * 128
+        dense_film_1 = self.dense_film_1(caption_features)
+        dense_film_2 = self.dense_film_2(caption_features)
+        dense_film_3 = self.dense_film_3(caption_features)
+        dense_film_4 = self.dense_film_4(caption_features) # bsz * 128
 
-	gammas1, betas1 = torch.split(dense_film_1, self.in_dim, dim=-1)
-	gammas2, betas2 = torch.split(dense_film_2, self.in_dim, dim=-1)
-	gammas3, betas3 = torch.split(dense_film_3, self.in_dim, dim=-1)
-	gammas4, betas4 = torch.split(dense_film_4, self.in_dim, dim=-1)
+        gammas1, betas1 = torch.split(dense_film_1, self.in_dim, dim=-1)
+        gammas2, betas2 = torch.split(dense_film_2, self.in_dim, dim=-1)
+        gammas3, betas3 = torch.split(dense_film_3, self.in_dim, dim=-1)
+        gammas4, betas4 = torch.split(dense_film_4, self.in_dim, dim=-1)
 
         out = self.mod1(x, gammas1, betas1) # out is 2x512x28x28
         out = self.mod2(out, gammas2, betas2) # out is 2x512x28x28
         out = self.mod3(out, gammas3, betas3)
         out_last = self.mod4(out, gammas4, betas4)
-	
-	out = self.upsample(out_last)
+    
+        out = self.upsample(out_last)
         out = self.classifier(out)
         out = out.permute(0, 2, 3, 1).contiguous()
         out = out.view(-1, self.num_classes)
@@ -157,21 +156,21 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
     stime = time.time()
     c = Counter()
     for i, (batch_start, batch_end) in enumerate(minibatches):
-	img_rgbs = train_origs[batch_start:batch_end]
+        img_rgbs = train_origs[batch_start:batch_end]
         img_labs = np.array([cvrgb2lab(img_rgb) for img_rgb in img_rgbs])
 
         input_ = torch.from_numpy(train_ims[batch_start:batch_end])
         target = torch.from_numpy(lookup_enc.encode_points(img_labs[:, ::4, ::4, 1:]))
 
-	# rand_idx = np.random.randint(5) # 5 captions per batch
-	input_captions_ = train_words[batch_start:batch_end]
-	input_lengths_ = train_lengths[batch_start:batch_end]
+        # rand_idx = np.random.randint(5) # 5 captions per batch
+        input_captions_ = train_words[batch_start:batch_end]
+        input_lengths_ = train_lengths[batch_start:batch_end]
 
-	# for now just choose first caption
-	input_captions = Variable(torch.from_numpy(\
-	    input_captions_.astype('int32')).long().cuda())
-	input_caption_lens = torch.from_numpy(\
-	    input_lengths_.astype('int32')).long().cuda()
+        # for now just choose first caption
+        input_captions = Variable(torch.from_numpy(\
+            input_captions_.astype('int32')).long().cuda())
+        input_caption_lens = torch.from_numpy(\
+        input_lengths_.astype('int32')).long().cuda()
 
         input_ims = Variable(input_.float().cuda())
         target = Variable(target.long()).cuda()
@@ -184,8 +183,8 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
         loss.backward()
         optimizer.step()
         if i % 50 == 0:
-            print 'loss at epoch %d, batch %d / %d = %f, time: %f s' % \
-                (epoch, i, len(minibatches), loss.data[0], time.time()-stime)
+            print ('loss at epoch %d, batch %d / %d = %f, time: %f s' % \
+                (epoch, i, len(minibatches), loss.data, time.time()-stime))
             stime = time.time()
 
             if True: # args.logs:
@@ -200,8 +199,8 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
                 img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[-1, :, :, 0], axis=2), AB_vals)))
                 img_labs_tosave = labim2rgb(img_labs[-1])
 
-		word_list = list(input_captions_[-1, :input_lengths_[-1]])     
-		words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+                word_list = list(input_captions_[-1, :input_lengths_[-1]])     
+                words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
 
                 cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
                     cv2.cvtColor(img_rgbs[-1].astype('uint8'), 
@@ -216,7 +215,7 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
                         'epoch': epoch + 1,
                         'state_dict': net.state_dict(),
                         'optimizer' : optimizer.state_dict(),
-                        'loss': loss.data[0],
+                        'loss': loss.data,
                     }, args.model_save_file+'_' + str(epoch)+'_'+str(i)+'.pth.tar')
     return net
 
@@ -266,30 +265,29 @@ def evaluate_attention_maps(minibatches, net, epoch, img_save_folder, save_every
 
         n_val_ims += len(AB_vals)
         for k, (img_rgb, AB_val) in enumerate(zip(img_rgbs, AB_vals)):
-	       # attention stuff
-               AB_val = cv2.resize(AB_val, (224, 224),
-                     interpolation=cv2.INTER_CUBIC)
-               img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
-              
-               val_loss += error_metric(img_dec, img_rgb)
-               if k == 0 and i%save_every == 0:
-	           output_maps = torch.mean(output_maps, dim=1)
-                   output_maps = output_maps.data.cpu().numpy()
-                   output_maps = scale_attention_map(output_maps[k])
+            # attention stuff
+            AB_val = cv2.resize(AB_val, (224, 224), interpolation=cv2.INTER_CUBIC)
+            img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
 
-		   word_list = list(input_captions_[k, :input_lengths_[k]])     
-		   words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+            val_loss += error_metric(img_dec, img_rgb)
+            if k == 0 and i%save_every == 0:
+                output_maps = torch.mean(output_maps, dim=1)
+                output_maps = output_maps.data.cpu().numpy()
+                output_maps = scale_attention_map(output_maps[k])
 
-                   img_labs_tosave = labim2rgb(img_labs[k])
-                   cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
-                       cv2.cvtColor(img_rgbs[k].astype('uint8'), 
-                       cv2.COLOR_RGB2GRAY))
-                   cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
-                       img_rgbs[k].astype('uint8'))
-                   cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
-                       img_dec.astype('uint8'))
-	   	   cv2.imwrite('%s/%d_%d_att.jpg'%(img_save_folder, epoch, i), output_maps)
-          
+                word_list = list(input_captions_[k, :input_lengths_[k]])     
+                words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+
+                img_labs_tosave = labim2rgb(img_labs[k])
+                cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
+                cv2.cvtColor(img_rgbs[k].astype('uint8'), 
+                cv2.COLOR_RGB2GRAY))
+                cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
+                img_rgbs[k].astype('uint8'))
+                cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
+                img_dec.astype('uint8'))
+                cv2.imwrite('%s/%d_%d_att.jpg'%(img_save_folder, epoch, i), output_maps)
+
     return val_loss / len(val_minibatches) # , val_masked_loss / len(val_minibatches)
 
 
@@ -331,25 +329,25 @@ def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
 
         n_val_ims += len(AB_vals)
         for k, (img_rgb, AB_val) in enumerate(zip(img_rgbs, AB_vals)):
-               AB_val = cv2.resize(AB_val, (224, 224),
-                     interpolation=cv2.INTER_CUBIC)
-               img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
-                
-               val_loss += error_metric(img_dec, img_rgb)
-               if k == 0 and i%save_every == 0:
+            AB_val = cv2.resize(AB_val, (224, 224),
+            interpolation=cv2.INTER_CUBIC)
+            img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
 
-		   word_list = list(input_captions_[k, :input_lengths_[k]])     
-		   words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+            val_loss += error_metric(img_dec, img_rgb)
+            if k == 0 and i%save_every == 0:
 
-                   img_labs_tosave = labim2rgb(img_labs[k])
-                   cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
-                       cv2.cvtColor(img_rgbs[k].astype('uint8'), 
-                       cv2.COLOR_RGB2GRAY))
-                   cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
-                       img_rgbs[k].astype('uint8'))
-                   cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
-                       img_dec.astype('uint8'))
-          
+                word_list = list(input_captions_[k, :input_lengths_[k]])     
+                words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+
+                img_labs_tosave = labim2rgb(img_labs[k])
+                cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
+                cv2.cvtColor(img_rgbs[k].astype('uint8'), 
+                cv2.COLOR_RGB2GRAY))
+                cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
+                img_rgbs[k].astype('uint8'))
+                cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
+                img_dec.astype('uint8'))
+
     return val_loss / len(val_minibatches) # , val_masked_loss / len(val_minibatches)
 
 
@@ -372,8 +370,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid
-    train_vocab = pickle.load(open(args.vocab_file_name, 'r'))
-    train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'r'))
+    train_vocab = pickle.load(open(args.vocab_file_name, 'rb'))
+    train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'rb'), encoding='latin1')
 
 
     # seeds                     
@@ -398,9 +396,9 @@ if __name__ == '__main__':
     gamma = 0.5
     gradient_prior_factor = Variable(torch.from_numpy(
         prior_boosting('./priors/coco_priors_onehot_625.npy', alpha, gamma)).float().cuda())
-    print 'rebalancing'
+    print ('rebalancing')
     loss_function = nn.CrossEntropyLoss(weight=gradient_prior_factor)
-    vrev = dict((v,k) for (k,v) in train_vocab.iteritems())          
+    vrev = dict((v,k) for (k,v) in train_vocab.items())          
     n_vocab = len(train_vocab)
 
     net = AutocolorizeResnet(n_vocab, train_vocab_embeddings=train_vocab_embeddings) # leave other stuff at default values
@@ -431,21 +429,21 @@ if __name__ == '__main__':
     if not os.path.exists(img_save_folder):
         os.makedirs(img_save_folder)                                    
 
-    print img_save_folder
-    print 'start training ....'
+    print (img_save_folder)
+    print ('start training ....')
 
     for epoch in range(args.start_epoch, args.end_epoch):
-	random.shuffle(minibatches)
+        random.shuffle(minibatches)
         random.shuffle(val_minibatches)
 
-	net = train(minibatches, net, optimizer, epoch, gradient_prior_factor,
-	    img_save_folder)
-	t = time.time()
+        net = train(minibatches, net, optimizer, epoch, gradient_prior_factor,
+            img_save_folder)
+        t = time.time()
         if args.save_attention_maps == 0:
             val_full_loss = evaluate(val_minibatches, net, epoch, val_img_save_folder)
         else:
             val_full_loss = evaluate_attention_maps(val_minibatches, net, epoch, val_img_save_folder)
-        # print 'full image rmse: %f' % (val_full_loss)
+        print ('full image rmse: %f' % (val_full_loss))
 
 
         

@@ -235,9 +235,12 @@ def produce_minibatch_idxs(n, b):
     # n : total examples
     # b : batch size
     n_batches = n // b
-    minibatches = [(i*b, (i+1)*b) for i in range(n_batches)]
-    if (i+1)*b != n:
-        minibatches.append( ((i+1)*b, n) )
+
+    minibatches = []
+
+    for i in range(n_batches):
+        minibatches.append((i*b, (i+1)*b))
+    
     return minibatches
 
 def na(): # shorthand for new axis
@@ -352,7 +355,7 @@ class LookupEncode():
 
     # return lab grid marks from probability distribution over bins
     def decode_points(self, pts_enc):
-        print pts_enc
+        print (pts_enc)
         return pts_enc.dot(self.cc)
 
 
@@ -465,8 +468,8 @@ def test_img_ops():
     # pudb.set_trace()
     # t2 = time.time()
     # print (t2 - t1)
-    print np.max(img_ab_enc), ' ', np.min(img_ab_enc)
-    print img_ab_enc.shape
+    print (np.max(img_ab_enc), ' ', np.min(img_ab_enc))
+    print (img_ab_enc.shape)
     pudb.set_trace()
     img_dec = decode(nnenc, img_l, img_ab_enc)
     # img_dec = np.concatenate((img_l[:, :, np.newaxis], img_ab), axis=2)
@@ -479,8 +482,8 @@ if __name__ == '__main__':
     shit = cvrgb2lab(cv2.imread('../data/sanity_check/shit1.jpg'))[1:]
     zhang = cvrgb2lab(cv2.imread('../data/sanity_check/zhang1.jpg'))[1:]
 
-    print 'gt_im gt_im %f %f' % (((gt_im - gt_im) ** 2).mean(), psnr(gt_im, gt_im))
-    print 'gt_im film %f %f' % (((gt_im - film) ** 2).mean(), psnr(gt_im, film))
-    print 'gt_im shit %f %f' % (((gt_im - shit) ** 2).mean(), psnr(gt_im, shit))
-    print 'gt_im zhang %f %f' % (((gt_im - zhang) ** 2).mean(), psnr(gt_im, zhang))
+    print ('gt_im gt_im %f %f' % (((gt_im - gt_im) ** 2).mean(), psnr(gt_im, gt_im)))
+    print ('gt_im film %f %f' % (((gt_im - film) ** 2).mean(), psnr(gt_im, film)))
+    print ('gt_im shit %f %f' % (((gt_im - shit) ** 2).mean(), psnr(gt_im, shit)))
+    print ('gt_im zhang %f %f' % (((gt_im - zhang) ** 2).mean(), psnr(gt_im, zhang)))
 
