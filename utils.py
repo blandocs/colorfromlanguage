@@ -13,7 +13,7 @@ import re
 
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.init import kaiming_normal, kaiming_uniform
+from torch.nn.init import kaiming_normal_, kaiming_uniform_
 
 
 def cvrgb2lab(img_rgb):
@@ -25,9 +25,9 @@ def cvrgb2lab(img_rgb):
 
 def init_modules(modules, init='uniform'):
     if init.lower() == 'normal':
-        init_params = kaiming_normal
+        init_params = kaiming_normal_
     elif init.lower() == 'uniform':
-        init_params = kaiming_uniform
+        init_params = kaiming_uniform_
     else:
         return
     for m in modules:

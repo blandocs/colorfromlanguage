@@ -121,7 +121,6 @@ class AutocolorizeResnet(nn.Module):
         # out = x # 2x512x28x28
         # out = F.relu(self.conv1(out)) # 2x512x28x28
         self.dense_film_4 = nn.Linear(self.n_lstm_hidden*2, self.in_dim*2)
-        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear')
 
         self.classifier = nn.Conv2d(512, self.num_classes, kernel_size=1, stride=1, dilation=1) 
 
@@ -144,8 +143,8 @@ class AutocolorizeResnet(nn.Module):
         out = self.mod2(out, gammas2, betas2) # out is 2x512x28x28
         out = self.mod3(out, gammas3, betas3)
         out_last = self.mod4(out, gammas4, betas4)
-    
-        out = self.upsample(out_last)
+        
+        out = F.interpolate(out_last, scale_factor=2, mode='bilinear', align_corners = True)
         out = self.classifier(out)
         out = out.permute(0, 2, 3, 1).contiguous()
         out = out.view(-1, self.num_classes)
@@ -190,7 +189,7 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
             if True: # args.logs:
 
                 # softmax output and multiply by grid
-                dec_inp = nn.Softmax()(output) # 12544x625
+                dec_inp = nn.Softmax(dim=1)(output) # 12544x625
                 AB_vals = dec_inp.mm(cuda_cc) # 12544x2
                 # reshape and select last image of batch]
                 AB_vals = AB_vals.view(len(img_labs), 56, 56, 2)[-1].data.cpu().numpy()[None,:,:,:]
