@@ -323,7 +323,7 @@ def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
         output, _ = net(input_ims, input_captions, input_caption_lens)
 
         # softmax output and multiply by grid
-        dec_inp = nn.Softmax()(output) # 12544x625
+        dec_inp = nn.Softmax(dim=1)(output) # 12544x625
         AB_vals = dec_inp.mm(cuda_cc) # 12544x2
         # reshape and select last image of batch]
         AB_vals = AB_vals.view(len(img_labs), 56, 56, 2).data.cpu().numpy()
