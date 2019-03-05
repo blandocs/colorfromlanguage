@@ -371,9 +371,21 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid
+
     train_vocab = pickle.load(open(args.vocab_file_name, 'rb'))
     train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'rb'), encoding='latin1')
 
+    print(min(train_vocab.values()), max(train_vocab.values()))
+    print(train_vocab_embeddings[3])
+
+    vocab = pickle.load(open('w2v.pkl', 'rb'))
+
+    train_vocab = vocab['tag_dict']
+    train_vocab_embeddings = vocab['word_embeddings']
+
+    print(train_vocab)
+    print(train_vocab_embeddings[3])
+    exit()
 
     # seeds                     
     torch.manual_seed(1000)     
