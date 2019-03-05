@@ -8,7 +8,7 @@ def color_transform(color_img):
     input_size = 224
     t = transforms.Compose([transforms.Resize((input_size, input_size))])
     return t(color_img)
-def load_images(load_type, file_id_list, data_size):
+def load_images(load_type, file_id_list):
 
     if load_type == 'train':
         data_dir = 'rgb_train'
@@ -45,8 +45,7 @@ def load_images(load_type, file_id_list, data_size):
 
         if image_count % 100 == 0:
             print(image_count)
-        if image_count >= data_size:
-            break
+
     return np.array(image_files), loaded_file_ids
 
 def get_file_id_list(load_type):
@@ -60,6 +59,7 @@ def get_file_id_list(load_type):
 def load_words(load_type, file_id_list, train_vocab):
     f = open('tag2sentence.pkl', 'rb')
     pkl = pickle.load(f)
+
     sentence_data = pkl[load_type]    
     max_length = 20
 

@@ -369,10 +369,10 @@ if __name__ == '__main__':
     parser.add_argument('--image_save_folder', help='prefix of the folders where images are stored')
     parser.add_argument('--model_save_file', help='prefix of the model save file')
     parser.add_argument('--save_attention_maps', default=0, help='save maps as well')
-    parser.add_argument('--data_size', default=1024, type=int)
+    # parser.add_argument('--data_size', default=1024, type=int)
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid
-    data_size = args.data_size
+    # data_size = args.data_size
 
     # train_vocab = pickle.load(open(args.vocab_file_name, 'rb'))
     # train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'rb'), encoding='latin1')
@@ -425,7 +425,7 @@ if __name__ == '__main__':
 
     train_file_id_list = get_file_id_list('train')
     # print(file_id_list)
-    train_origs, train_loaded_file_ids = load_images('train', train_file_id_list, data_size)
+    train_origs, train_loaded_file_ids = load_images('train', train_file_id_list)
     # train_origs = hf['train_ims']
     train_ims = ff['train_features']
 
@@ -434,8 +434,10 @@ if __name__ == '__main__':
     # train_words = hf['train_words']                                         
     # train_lengths = hf['train_length']                                      
                                    
-    val_file_id_list = get_file_id_list('val')    
-    val_origs, val_loaded_file_ids = load_images('val', val_file_id_list, data_size)                            
+    val_file_id_list = get_file_id_list('val')   
+
+    val_origs, val_loaded_file_ids = load_images('val', val_file_id_list)    
+    print(len(val_loaded_file_ids), "count")                          
     # val_origs = hf['val_ims']                                     
     val_ims = ff['val_features']      
     # print(train_vocab)  
@@ -443,15 +445,15 @@ if __name__ == '__main__':
     # val_words = hf['val_words']                                             
     # val_lengths = hf['val_length']                                          
                                                                          
-    n_train_ims = len(train_loaded_file_ids)
+    n_train_ims = len(train_words)
                                        
     minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  
     # print(n_train_ims, minibatches)
 
-    n_val_ims = len(val_loaded_file_ids)   
+    n_val_ims = len(val_words)   
 
     val_minibatches = produce_minibatch_idxs(n_val_ims, 4)[:-1]
-    # print(n_val_ims, val_minibatches)
+    print(n_val_ims, val_minibatches)
 
     val_img_save_folder = args.image_save_folder+'_val'
     if not os.path.exists(val_img_save_folder): 
