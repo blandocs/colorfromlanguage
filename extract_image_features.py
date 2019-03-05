@@ -21,6 +21,7 @@ import pickle
 from pathlib import Path
 from PIL import Image
 from torchvision import transforms
+from added_func import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--max_images', default=None, type=int)
@@ -86,55 +87,12 @@ def run_batch(cur_batch, model):
 
     return feats
 
-def color_transform(color_img):
-    input_size = 224
-    t = transforms.Compose([transforms.Resize((input_size, input_size))])
-    return t(color_img)
-def load_images(load_type, file_id_list):
-
-    if load_type == 'train':
-        data_dir = 'rgb_train'
-
-    elif load_type == 'val':
-        data_dir = 'rgb_test'
-    else:
-        return
-
-
-    image_files = []
-
-    for file_id in file_id_list:
-        color_path = Path(f"../dataset/{data_dir}/{file_id}.png")
-        # print(color_path)
-        if not (color_path).exists():
-            continue
-
-        color_img = Image.open(color_path).convert('RGB')
-        # print(color_img)
-        pix = np.array(color_img)
-        # print(pix.shape)
-        color_img = color_transform(color_img)
-        # print(color_img)
-        pix = np.array(color_img)
-        # print(pix.shape)
-        image_files.append(pix)
-
-    return image_files
-
-def get_file_id_list(load_type):
-    
-    f = open('tag2sentence.pkl', 'rb')
-    pkl = pickle.load(f)
-    sentence_data = pkl[load_type]
-    return sentence_data.keys()
 
 def main(args):
 
     # input_h5_file = h5.File(args.input_h5_file, 'r')
     model = build_model(args)
     data_dir = args.data_dir
-
-
 
     with h5.File(args.output_h5_file, 'w') as f:
         for split in ['train', 'val']:
@@ -144,7 +102,7 @@ def main(args):
             # image_files = input_h5_file[split+'_ims']
             file_id_list = get_file_id_list(split)
             # print(file_id_list)
-            image_files = load_images(split, file_id_list)
+            image_files, _ = load_images(split, file_id_list)
             # print(image_files[0])
             # return
             for i, img in tqdm(enumerate(image_files)):

@@ -27,6 +27,7 @@ from utils import decode_lookup, produce_minibatch_idxs, rgbim2lab,\
     annealing, enc_batch_nnenc, LookupEncode, labim2rgb, error_metric, rmse_ab
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 from torch.nn.utils.rnn import pack_padded_sequence as pack
+from added_func import *
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -362,7 +363,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', '-b', default=24, type=int, help='batch size')
     parser.add_argument('--d_emb', default=300, type=int, help='word-embedding dimension')
     parser.add_argument('--d_hid', default=150, type=float, help='lstm hidden dimension')
-    parser.add_argument('--h5_file', help='h5 file which contains everything except features')
+    # parser.add_argument('--h5_file', help='h5 file which contains everything except features')
     parser.add_argument('--features_file', help='h5 file which contains features')
     parser.add_argument('--vocab_file_name', help='vocabulary file')
     parser.add_argument('--image_save_folder', help='prefix of the folders where images are stored')
@@ -372,20 +373,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid
 
-    train_vocab = pickle.load(open(args.vocab_file_name, 'rb'))
-    train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'rb'), encoding='latin1')
+    # train_vocab = pickle.load(open(args.vocab_file_name, 'rb'))
+    # train_vocab_embeddings = pickle.load(open('./priors/w2v_embeddings_colors.p', 'rb'), encoding='latin1')
 
-    print(min(train_vocab.values()), max(train_vocab.values()))
-    print(train_vocab_embeddings[3])
+    # print(min(train_vocab.values()), max(train_vocab.values()))
+    # print(train_vocab_embeddings[3])
 
     vocab = pickle.load(open('w2v.pkl', 'rb'))
 
     train_vocab = vocab['tag_dict']
-    train_vocab_embeddings = vocab['word_embeddings']
-
-    print(train_vocab)
-    print(train_vocab_embeddings[3])
-    exit()
+    train_vocab_embeddings = np.array(vocab['word_embeddings'])
+    # print(train_vocab)
+    # print(train_vocab_embeddings[3])
+    # exit()
 
     # seeds                     
     torch.manual_seed(1000)     
@@ -399,8 +399,8 @@ if __name__ == '__main__':
 
     cuda_cc = Variable(torch.from_numpy(lookup_enc.cc).float().to(device))
 
-    hfile = args.h5_file
-    hf = h5.File(hfile, 'r')
+    # hfile = args.h5_file
+    # hf = h5.File(hfile, 'r')
     features_file = args.features_file
     ff = h5.File(features_file, 'r')
 
@@ -421,20 +421,36 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
 
-    train_origs = hf['train_ims']
-    train_ims = ff['train_features']             
-    train_words = hf['train_words']                                         
-    train_lengths = hf['train_length']                                      
-                                    
-    val_origs = hf['val_ims']                                     
-    val_ims = ff['val_features']                                                 
-    val_words = hf['val_words']                                             
-    val_lengths = hf['val_length']                                          
+
+    train_file_id_list = get_file_id_list('train')
+    # print(file_id_list)
+    train_origs, train_loaded_file_ids = load_images('train', train_file_id_list)
+    # train_origs = hf['train_ims']
+    train_ims = ff['train_features']
+
+    train_words, train_lengths = load_words('train', train_loaded_file_ids, train_vocab)
+
+    # train_words = hf['train_words']                                         
+    # train_lengths = hf['train_length']                                      
+                                   
+    val_file_id_list = get_file_id_list('val')    
+    val_origs, val_loaded_file_ids = load_images('val', val_file_id_list)                            
+    # val_origs = hf['val_ims']                                     
+    val_ims = ff['val_features']      
+    # print(train_vocab)  
+    val_words, val_lengths = load_words('val', val_loaded_file_ids, train_vocab)                                         
+    # val_words = hf['val_words']                                             
+    # val_lengths = hf['val_length']                                          
                                                                          
-    n_train_ims = len(train_ims)                                             
+    n_train_ims = len(train_ims)     
+                                       
     minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  
-    n_val_ims = len(val_ims)                                                 
-    val_minibatches = produce_minibatch_idxs(n_val_ims, 4)[:-1]
+    # print(n_train_ims, minibatches)
+
+    n_val_ims = len(val_ims)   
+
+    val_minibatches = produce_minibatch_idxs(n_val_ims, 1)[:-1]
+    # print(n_val_ims, val_minibatches)
 
     val_img_save_folder = args.image_save_folder+'_val'
     if not os.path.exists(val_img_save_folder): 
