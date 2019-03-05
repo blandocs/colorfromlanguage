@@ -17,10 +17,15 @@ import torch
 import torchvision
 import cv2
 import torch.nn as nn
+import pickle
+from pathlib import Path
+from PIL import Image
+from torchvision import transforms
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--max_images', default=None, type=int)
-parser.add_argument('--input_h5_file', required=True)
+# parser.add_argument('--input_h5_file', required=True)
+parser.add_argument('--data_dir', default='../dataset')
 parser.add_argument('--output_h5_file', required=True)
 
 parser.add_argument('--image_height', default=224, type=int)
@@ -81,18 +86,67 @@ def run_batch(cur_batch, model):
 
     return feats
 
+def color_transform(color_img):
+    input_size = 224
+    t = transforms.Compose([transforms.Resize((input_size, input_size))])
+    return t(color_img)
+def load_images(load_type, file_id_list):
+
+    if load_type == 'train':
+        data_dir = 'rgb_train'
+
+    elif load_type == 'val':
+        data_dir = 'rgb_test'
+    else:
+        return
+
+
+    image_files = []
+
+    for file_id in file_id_list:
+        color_path = Path(f"../dataset/{data_dir}/{file_id}.png")
+        # print(color_path)
+        if not (color_path).exists():
+            continue
+
+        color_img = Image.open(color_path).convert('RGB')
+        # print(color_img)
+        pix = np.array(color_img)
+        # print(pix.shape)
+        color_img = color_transform(color_img)
+        # print(color_img)
+        pix = np.array(color_img)
+        # print(pix.shape)
+        image_files.append(pix)
+
+    return image_files
+
+def get_file_id_list(load_type):
+    
+    f = open('tag2sentence.pkl', 'rb')
+    pkl = pickle.load(f)
+    sentence_data = pkl[load_type]
+    return sentence_data.keys()
 
 def main(args):
 
-    input_h5_file = h5.File(args.input_h5_file, 'r')
+    # input_h5_file = h5.File(args.input_h5_file, 'r')
     model = build_model(args)
+    data_dir = args.data_dir
+
+
 
     with h5.File(args.output_h5_file, 'w') as f:
         for split in ['train', 'val']:
             feat_dset = None
             i0 = 0
             cur_batch = []
-            image_files = input_h5_file[split+'_ims']
+            # image_files = input_h5_file[split+'_ims']
+            file_id_list = get_file_id_list(split)
+            # print(file_id_list)
+            image_files = load_images(split, file_id_list)
+            # print(image_files[0])
+            # return
             for i, img in tqdm(enumerate(image_files)):
                 # converting the image to gray
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -113,7 +167,13 @@ def main(args):
                     cur_batch = []
             if len(cur_batch) > 0:
                 feats = run_batch(cur_batch, model)
+                if feat_dset is None:
+                    N = len(image_files)
+                    _, C, H, W = feats.shape
+                    feat_dset = f.create_dataset(split+'_features', (N, C, H, W),
+                                       dtype=np.float32)
                 i1 = i0 + len(cur_batch)
+
                 feat_dset[i0:i1] = feats
     return
 
