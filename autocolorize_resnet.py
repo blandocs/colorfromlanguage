@@ -190,7 +190,6 @@ def train(minibatches, net, optimizer, epoch, prior_probs, img_save_folder):
             stime = time.time()
 
             if True: # args.logs:
-
                 # softmax output and multiply by grid
                 dec_inp = nn.Softmax(dim=1)(output) # 12544x625
                 AB_vals = dec_inp.mm(cuda_cc) # 12544x2
@@ -429,7 +428,12 @@ if __name__ == '__main__':
     # train_origs = hf['train_ims']
     train_ims = ff['train_features']
 
-    train_words, train_lengths = load_words('train', train_loaded_file_ids, train_vocab)
+    train_words, train_lengths, train_origs = load_words('train', train_loaded_file_ids, train_vocab, train_origs)
+
+    # print(len(train_origs), len(train_words), "should be same")
+    if len(train_origs) != len(train_words):
+        print('error')
+        exit()
 
     # train_words = hf['train_words']                                         
     # train_lengths = hf['train_length']                                      
@@ -437,14 +441,18 @@ if __name__ == '__main__':
     val_file_id_list = get_file_id_list('val')   
 
     val_origs, val_loaded_file_ids = load_images('val', val_file_id_list)    
-    print(len(val_loaded_file_ids), "count")                          
+                         
     # val_origs = hf['val_ims']                                     
     val_ims = ff['val_features']      
     # print(train_vocab)  
-    val_words, val_lengths = load_words('val', val_loaded_file_ids, train_vocab)                                         
+    val_words, val_lengths, val_origs = load_words('val', val_loaded_file_ids, train_vocab, val_origs)                                         
     # val_words = hf['val_words']                                             
-    # val_lengths = hf['val_length']                                          
-                                                                         
+    # val_lengths = hf['val_length']  
+
+    if len(val_origs) != len(val_words):
+        print('error')
+        exit()
+
     n_train_ims = len(train_words)
                                        
     minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  

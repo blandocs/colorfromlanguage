@@ -56,7 +56,7 @@ def get_file_id_list(load_type):
     return sentence_data.keys()
 
 
-def load_words(load_type, file_id_list, train_vocab):
+def load_words(load_type, file_id_list, train_vocab, train_origs):
     f = open('tag2sentence.pkl', 'rb')
     pkl = pickle.load(f)
 
@@ -65,8 +65,9 @@ def load_words(load_type, file_id_list, train_vocab):
 
     train_words = []
     train_lengths = []
+    new_train_origs = []
 
-    for file_id in file_id_list:
+    for i, file_id in enumerate(file_id_list):
         nl = sentence_data[file_id]
         word_to_index = [0] * max_length
 
@@ -74,7 +75,9 @@ def load_words(load_type, file_id_list, train_vocab):
 
         if len(nl) >= 20:
             continue
-            
+        else:
+            new_train_origs.append(train_origs[i])
+
         for word in nl:
             embedding_index = train_vocab[word]
             word_to_index[length] = embedding_index
@@ -89,6 +92,6 @@ def load_words(load_type, file_id_list, train_vocab):
     train_words = np.array(train_words, dtype=np.uint32)
     train_lengths = np.array(train_lengths, dtype=np.uint8)
 
-    print(train_words, train_lengths)
-    return train_words, train_lengths
+    # print(train_words, train_lengths)
+    return train_words, train_lengths, new_train_origs
 
