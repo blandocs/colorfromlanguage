@@ -8,7 +8,7 @@ def color_transform(color_img):
     input_size = 224
     t = transforms.Compose([transforms.Resize((input_size, input_size))])
     return t(color_img)
-def load_images(load_type, file_id_list):
+def load_images(load_type, file_id_list, data_size):
 
     if load_type == 'train':
         data_dir = 'rgb_train'
@@ -21,12 +21,14 @@ def load_images(load_type, file_id_list):
 
     image_files = []
     loaded_file_ids = []
+    image_count = 0
 
     for file_id in file_id_list:
         color_path = Path(f"../dataset/{data_dir}/{file_id}.png")
         # print(color_path)
         if not (color_path).exists():
             continue
+
 
         color_img = Image.open(color_path).convert('RGB')
         # print(color_img)
@@ -38,6 +40,13 @@ def load_images(load_type, file_id_list):
         # print(pix.shape)
         image_files.append(pix)
         loaded_file_ids.append(file_id)
+
+        image_count += 1
+
+        if image_count % 100 == 0:
+            print(image_count)
+        if image_count >= data_size:
+            break
     return image_files, loaded_file_ids
 
 def get_file_id_list(load_type):
@@ -62,11 +71,17 @@ def load_words(load_type, file_id_list, train_vocab):
         word_to_index = [0] * max_length
 
         length = 0
+
+        if len(nl) >= 20:
+            continue
+            
         for word in nl:
             embedding_index = train_vocab[word]
             word_to_index[length] = embedding_index
 
             length += 1
+
+
 
         train_words.append(word_to_index)
         train_lengths.append(length)
@@ -76,3 +91,4 @@ def load_words(load_type, file_id_list, train_vocab):
 
     print(train_words, train_lengths)
     return train_words, train_lengths
+

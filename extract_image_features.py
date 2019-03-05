@@ -39,7 +39,10 @@ parser.add_argument('--model_stage', default=2, type=int)
 # model_stage 3 --> 1200, 1024, 14, 14
 # model_stage 4 --> 1200, 2048, 7, 7
 parser.add_argument('--batch_size', default=128, type=int)
+parser.add_argument('--data_size', default=1024, type=int)
 parser.add_argument('--bw', default='No')
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def build_model(args):
     if args.model.lower() == 'none':
@@ -60,7 +63,7 @@ def build_model(args):
         layers.append(getattr(cnn, name))
     model = torch.nn.Sequential(*layers)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
 
     model = nn.DataParallel(model)
     model.to(device)   
@@ -78,7 +81,7 @@ def run_batch(cur_batch, model):
 
     image_batch = np.concatenate(cur_batch, 0).astype(np.float32)
     image_batch = (image_batch / 255.0 - mean) / std
-    image_batch = torch.FloatTensor(image_batch).cuda()
+    image_batch = torch.FloatTensor(image_batch).to(device)
     with torch.no_grad():
         image_batch = torch.autograd.Variable(image_batch)
 
@@ -93,6 +96,7 @@ def main(args):
     # input_h5_file = h5.File(args.input_h5_file, 'r')
     model = build_model(args)
     data_dir = args.data_dir
+    data_size = args.data_size
 
     with h5.File(args.output_h5_file, 'w') as f:
         for split in ['train', 'val']:
@@ -102,11 +106,12 @@ def main(args):
             # image_files = input_h5_file[split+'_ims']
             file_id_list = get_file_id_list(split)
             # print(file_id_list)
-            image_files, _ = load_images(split, file_id_list)
+            image_files, _ = load_images(split, file_id_list, data_size)
             # print(image_files[0])
             # return
-            for i, img in tqdm(enumerate(image_files)):
+            for i, img in tqdm(enumerate(image_files[0:data_size])):
                 # converting the image to gray
+                print(i)
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 img = np.stack((img,)*3, -1)
 
@@ -123,6 +128,7 @@ def main(args):
                     feat_dset[i0:i1] = feats
                     i0 = i1
                     cur_batch = []
+                    print(len(cur_batch), data_size)
             if len(cur_batch) > 0:
                 feats = run_batch(cur_batch, model)
                 if feat_dset is None:
@@ -139,4 +145,5 @@ def main(args):
 if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
+
 
