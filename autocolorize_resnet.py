@@ -443,12 +443,12 @@ if __name__ == '__main__':
     # val_words = hf['val_words']                                             
     # val_lengths = hf['val_length']                                          
                                                                          
-    n_train_ims = len(train_ims)     
+    n_train_ims = len(train_loaded_file_ids)
                                        
     minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  
     # print(n_train_ims, minibatches)
 
-    n_val_ims = len(val_ims)   
+    n_val_ims = len(val_loaded_file_ids)   
 
     val_minibatches = produce_minibatch_idxs(n_val_ims, 4)[:-1]
     # print(n_val_ims, val_minibatches)
