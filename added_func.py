@@ -32,11 +32,11 @@ def load_images(load_type, file_id_list, data_size):
 
         color_img = Image.open(color_path).convert('RGB')
         # print(color_img)
-        pix = np.array(color_img)
+        # pix = np.array(color_img)
         # print(pix.shape)
         color_img = color_transform(color_img)
         # print(color_img)
-        pix = np.array(color_img)
+        pix = np.array(color_img, dtype= 'uint8')
         # print(pix.shape)
         image_files.append(pix)
         loaded_file_ids.append(file_id)
@@ -47,7 +47,7 @@ def load_images(load_type, file_id_list, data_size):
             print(image_count)
         if image_count >= data_size:
             break
-    return image_files, loaded_file_ids
+    return np.array(image_files), loaded_file_ids
 
 def get_file_id_list(load_type):
     
@@ -86,8 +86,8 @@ def load_words(load_type, file_id_list, train_vocab):
         train_words.append(word_to_index)
         train_lengths.append(length)
 
-    train_words = np.array(train_words, dtype=np.int32)
-    train_lengths = np.array(train_lengths, dtype=np.int32)
+    train_words = np.array(train_words, dtype=np.uint32)
+    train_lengths = np.array(train_lengths, dtype=np.uint8)
 
     print(train_words, train_lengths)
     return train_words, train_lengths
