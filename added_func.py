@@ -31,14 +31,15 @@ def load_images(load_type, file_id_list):
 
 
         color_img = Image.open(color_path).convert('RGB')
-        # print(color_img)
         # pix = np.array(color_img)
         # print(pix.shape)
         color_img = color_transform(color_img)
         # print(color_img)
-        pix = np.array(color_img, dtype= 'uint8')
+        rgb = np.array(color_img, dtype= 'uint8')
+        bgr = rgb[...,::-1]
+
         # print(pix.shape)
-        image_files.append(pix)
+        image_files.append(bgr)
         loaded_file_ids.append(file_id)
 
         image_count += 1
@@ -94,4 +95,5 @@ def load_words(load_type, file_id_list, train_vocab, train_origs):
 
     # print(train_words, train_lengths)
     return train_words, train_lengths, new_train_origs
+
 

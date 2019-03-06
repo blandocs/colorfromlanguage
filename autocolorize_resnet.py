@@ -368,6 +368,8 @@ if __name__ == '__main__':
     parser.add_argument('--image_save_folder', help='prefix of the folders where images are stored')
     parser.add_argument('--model_save_file', help='prefix of the model save file')
     parser.add_argument('--save_attention_maps', default=0, help='save maps as well')
+    parser.add_argument('--load_path', type=str)
+
     # parser.add_argument('--data_size', default=1024, type=int)
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid
@@ -421,6 +423,15 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.Adam(net.parameters(), lr=args.lr)
 
+    load_epoch = None
+
+    if args.load_path:
+        checkpoint = torch.load(args.load_path)
+        net.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        load_epoch = checkpoint['epoch']
+
+        print(f"load model start epoch {load_epoch}")
 
     train_file_id_list = get_file_id_list('train')
     # print(file_id_list)
@@ -474,7 +485,15 @@ if __name__ == '__main__':
     print (img_save_folder)
     print ('start training ....')
 
-    for epoch in range(args.start_epoch, args.end_epoch):
+
+    epoch_base = 0
+
+    if load_epoch:
+        epoch_base = load_epoch
+
+    print(epoch_base + args.start_epoch, epoch_base + args.end_epoch)
+    
+    for epoch in range(epoch_base + args.start_epoch, epoch_base + args.end_epoch):
         random.shuffle(minibatches)
         random.shuffle(val_minibatches)
 
@@ -489,5 +508,3 @@ if __name__ == '__main__':
 
 
         
-
-
