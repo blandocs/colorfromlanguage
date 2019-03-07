@@ -433,19 +433,23 @@ if __name__ == '__main__':
 
         print(f"load model start epoch {load_epoch}")
 
+
     train_file_id_list = get_file_id_list('train')
+    print(len(train_file_id_list))
     # print(file_id_list)
     train_origs, train_loaded_file_ids = load_images('train', train_file_id_list)
     # train_origs = hf['train_ims']
     train_ims = ff['train_features']
 
-    train_words, train_lengths, train_origs = load_words('train', train_loaded_file_ids, train_vocab, train_origs)
+    train_words, train_lengths, train_origs, train_ims = load_words('train', train_loaded_file_ids, train_vocab, train_origs, train_ims)
 
     # print(len(train_origs), len(train_words), "should be same")
-    if len(train_origs) != len(train_words):
+    if (len(train_origs) != len(train_words)) or (len(train_origs) != len(train_ims)):
         print('error')
         exit()
-
+    
+    print(len(train_ims))
+    print(len(train_words))
     # train_words = hf['train_words']                                         
     # train_lengths = hf['train_length']                                      
                                    
@@ -456,11 +460,11 @@ if __name__ == '__main__':
     # val_origs = hf['val_ims']                                     
     val_ims = ff['val_features']      
     # print(train_vocab)  
-    val_words, val_lengths, val_origs = load_words('val', val_loaded_file_ids, train_vocab, val_origs)                                         
+    val_words, val_lengths, val_origs, val_ims = load_words('val', val_loaded_file_ids, train_vocab, val_origs, val_ims)                                         
     # val_words = hf['val_words']                                             
     # val_lengths = hf['val_length']  
-
-    if len(val_origs) != len(val_words):
+    print(len(val_origs),  len(val_words), len(val_ims))
+    if (len(val_origs) != len(val_words)) or (len(val_origs) != len(val_ims)):
         print('error')
         exit()
 
