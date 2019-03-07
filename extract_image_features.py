@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--max_images', default=None, type=int)
 # parser.add_argument('--input_h5_file', required=True)
 parser.add_argument('--data_dir', default='../dataset')
-parser.add_argument('--output_h5_file', required=True)
+parser.add_argument('--output_h5_file', default='image_features.h5')
 
 parser.add_argument('--image_height', default=224, type=int)
 parser.add_argument('--image_width', default=224, type=int)
@@ -98,6 +98,8 @@ def main(args):
     data_dir = args.data_dir
     # data_size = args.data_size
 
+    image_data_h5 = h5.File('image_data.h5', 'w')
+
     with h5.File(args.output_h5_file, 'w') as f:
         for split in ['train', 'val']:
             feat_dset = None
@@ -105,10 +107,29 @@ def main(args):
             cur_batch = []
             # image_files = input_h5_file[split+'_ims']
             file_id_list = get_file_id_list(split)
-            # print(file_id_list)
-            image_files, _ = load_images(split, file_id_list)
-            # print(image_files[0])
-            # return
+
+            if split == 'train':
+                rgb_dir = 'rgb_train'
+            else:
+                rgb_dir = 'rgb_test'
+
+            extracted_file_id_list = []
+
+            for file_id in file_id_list:
+                color_path = Path(f"{data_dir}/{rgb_dir}/{file_id}.png")
+                # print(color_path)
+                if not (color_path).exists():
+                    continue
+                else:
+                    extracted_file_id_list.append(file_id)
+
+            extracted_file_id_list = extracted_file_id_list
+            print(len(extracted_file_id_list))
+            image_files, loaded_file_ids = load_images(split, extracted_file_id_list)
+
+            image_data_h5.create_dataset(f'image_{split}', data=image_files)
+            image_data_h5.create_dataset(f'file_ids_{split}', data=loaded_file_ids)
+
             for i, img in tqdm(enumerate(image_files)):
                 # converting the image to gray
                 # print(i)
@@ -139,11 +160,14 @@ def main(args):
                 i1 = i0 + len(cur_batch)
 
                 feat_dset[i0:i1] = feats
+
+    image_data_h5.close()
     return
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
     main(args)
+
 
 
