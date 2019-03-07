@@ -441,7 +441,7 @@ if __name__ == '__main__':
     # train_origs = hf['train_ims']
     train_ims = ff['train_features']
 
-    train_words, train_lengths, train_contain_indexes = load_words('train', train_loaded_file_ids, train_vocab, train_origs, train_ims)
+    train_words, train_lengths, train_contain_indexes = load_words('train', train_loaded_file_ids, train_vocab)
 
 
     print(len(train_origs), len(train_words), len(train_ims))
@@ -469,7 +469,7 @@ if __name__ == '__main__':
     # val_origs = hf['val_ims']                                     
     val_ims = ff['val_features']      
     # print(train_vocab)  
-    val_words, val_lengths, val_contain_indexes = load_words('val', val_loaded_file_ids, train_vocab, val_origs, val_ims)                                         
+    val_words, val_lengths, val_contain_indexes = load_words('val', val_loaded_file_ids, train_vocab)                                         
     # val_words = hf['val_words']                                             
     # val_lengths = hf['val_length']  
     

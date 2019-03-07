@@ -57,7 +57,7 @@ def get_file_id_list(load_type):
     return sentence_data.keys()
 
 
-def load_words(load_type, file_id_list, train_vocab, train_origs, features):
+def load_words(load_type, file_id_list, train_vocab):
     f = open('tag2sentence.pkl', 'rb')
     pkl = pickle.load(f)
 
