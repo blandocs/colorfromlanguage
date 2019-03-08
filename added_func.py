@@ -59,10 +59,19 @@ def get_file_id_list(load_type):
 
 
 def load_words(load_type, file_id_list, train_vocab):
-    f = open('tag2sentence.pkl', 'rb')
-    pkl = pickle.load(f)
+    f = None
+    pkl = None
+    sentence_data = None
+    if load_type == 'val_test_random_color':
+        f = open('test_change_color_sentence.pkl', 'rb')
+        pkl = pickle.load(f)
+        sentence_data = pkl['data']      
 
-    sentence_data = pkl[load_type]    
+    else:
+        f = open('tag2sentence.pkl', 'rb')
+        pkl = pickle.load(f)
+        sentence_data = pkl[load_type]    
+
     max_length = 20
 
     train_words = []
@@ -70,6 +79,8 @@ def load_words(load_type, file_id_list, train_vocab):
 
     for i, file_id in enumerate(file_id_list):
         nl = sentence_data[file_id]
+        if load_type == 'val_test_random_color':
+            nl = nl[0]
         word_to_index = [0] * max_length
 
         length = 0
@@ -79,6 +90,7 @@ def load_words(load_type, file_id_list, train_vocab):
             nl = nl[:20]
 
         for word in nl:
+            # print(word)
             embedding_index = train_vocab[word]
             word_to_index[length] = embedding_index
 

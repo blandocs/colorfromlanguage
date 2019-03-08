@@ -472,43 +472,50 @@ if __name__ == '__main__':
 
     image_data_h5 = h5.File('image_data.h5', 'r')
 
-    train_origs, train_loaded_file_ids = image_data_h5['image_train'], image_data_h5['file_ids_train']
+    if args.test_path:
+        val_origs, val_loaded_file_ids = image_data_h5['image_val'], image_data_h5['file_ids_val']
+                                  
+        val_ims = ff['val_features']    
+        val_words, val_lengths = load_words('val_test_random_color', val_loaded_file_ids, train_vocab) 
+    else:
 
-    train_ims = ff['train_features']
+        train_origs, train_loaded_file_ids = image_data_h5['image_train'], image_data_h5['file_ids_train']
 
-    train_words, train_lengths = load_words('train', train_loaded_file_ids, train_vocab)
+        train_ims = ff['train_features']
 
-    print(len(train_origs), len(train_words), len(train_ims), "should be same")
-    
-    if (len(train_origs) != len(train_words)) or (len(train_origs) != len(train_ims)):
-        print('error')
-        exit()
+        train_words, train_lengths = load_words('train', train_loaded_file_ids, train_vocab)
 
-    # train_words = hf['train_words']                                         
-    # train_lengths = hf['train_length']                                      
-                                   
-    # val_file_id_list = get_file_id_list('val')   
+        print(len(train_origs), len(train_words), len(train_ims), "should be same")
+        
+        if (len(train_origs) != len(train_words)) or (len(train_origs) != len(train_ims)):
+            print('error')
+            exit()
 
-    # val_origs, val_loaded_file_ids = load_images('val', val_file_id_list)    
-    val_origs, val_loaded_file_ids = image_data_h5['image_val'], image_data_h5['file_ids_val']
+        n_train_ims = len(train_words)
+                                           
+        minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  
+        # print(n_train_ims, minibatches)
 
-    # val_origs = hf['val_ims']                                     
-    val_ims = ff['val_features']      
-    # print(train_vocab)  
-    val_words, val_lengths = load_words('val', val_loaded_file_ids, train_vocab)                                         
-    # val_words = hf['val_words']                                             
-    # val_lengths = hf['val_length']  
+        # train_words = hf['train_words']                                         
+        # train_lengths = hf['train_length']                                      
+                                       
+        # val_file_id_list = get_file_id_list('val')   
+
+        # val_origs, val_loaded_file_ids = load_images('val', val_file_id_list)    
+        val_origs, val_loaded_file_ids = image_data_h5['image_val'], image_data_h5['file_ids_val']
+
+        # val_origs = hf['val_ims']                                     
+        val_ims = ff['val_features']      
+        # print(train_vocab)  
+        val_words, val_lengths = load_words('val', val_loaded_file_ids, train_vocab)                                         
+        # val_words = hf['val_words']                                             
+        # val_lengths = hf['val_length']  
 
     print(len(val_origs),  len(val_words), len(val_ims))
 
     if (len(val_origs) != len(val_words)) or (len(val_origs) != len(val_ims)):
         print('error')
         exit()
-
-    n_train_ims = len(train_words)
-                                       
-    minibatches = produce_minibatch_idxs(n_train_ims, args.batch_size)[:-1]  
-    # print(n_train_ims, minibatches)
 
     n_val_ims = len(val_words)   
 
