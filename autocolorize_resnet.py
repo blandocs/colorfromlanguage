@@ -293,7 +293,7 @@ def evaluate_attention_maps(minibatches, net, epoch, img_save_folder, save_every
 
 
 
-def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
+def evaluate(minibatches, net, epoch, img_save_folder, save_every=20, is_test=False, val_loaded_file_ids=None):
     stime = time.time()
     c = Counter()
     val_full_loss = 0.
@@ -302,6 +302,7 @@ def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
 
     n_val_ims = 0
     for i, (batch_start, batch_end) in enumerate(val_minibatches):
+        # print(i, batch_start, batch_end)
         img_rgbs = val_origs[batch_start:batch_end]
         img_labs = np.array([cvrgb2lab(img_rgb) for img_rgb in img_rgbs])
 
@@ -329,25 +330,53 @@ def evaluate(minibatches, net, epoch, img_save_folder, save_every=20):
         AB_vals = AB_vals.view(len(img_labs), 56, 56, 2).data.cpu().numpy()
 
         n_val_ims += len(AB_vals)
-        for k, (img_rgb, AB_val) in enumerate(zip(img_rgbs, AB_vals)):
-            AB_val = cv2.resize(AB_val, (224, 224),
-            interpolation=cv2.INTER_CUBIC)
-            img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
 
-            val_loss += error_metric(img_dec, img_rgb)
-            if k == 0 and i%save_every == 0:
+        if is_test:
+            for k, (img_rgb, AB_val) in enumerate(zip(img_rgbs, AB_vals)):
+                AB_val = cv2.resize(AB_val, (224, 224),
+                interpolation=cv2.INTER_CUBIC)
+                img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
+                val_loss += error_metric(img_dec, img_rgb)            
 
                 word_list = list(input_captions_[k, :input_lengths_[k]])     
                 words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
 
                 img_labs_tosave = labim2rgb(img_labs[k])
-                cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
-                cv2.cvtColor(img_rgbs[k].astype('uint8'), 
+                
+                img_dec = cv2.resize(img_dec, (256, 256))
+                img_labs_tosave = cv2.resize(img_labs_tosave, (256, 256))
+                
+                file_id = val_loaded_file_ids[batch_start+k]
+
+                cv2.imwrite('%s/%s_bw.jpg'%(img_save_folder, file_id),
+                cv2.cvtColor(img_labs_tosave.astype('uint8'), 
                 cv2.COLOR_RGB2GRAY))
-                cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
-                img_rgbs[k].astype('uint8'))
-                cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
+                # cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
+                # img_labs_tosave.astype('uint8'))
+                cv2.imwrite('%s/%s_%s.jpg'%(img_save_folder, file_id, words),
                 img_dec.astype('uint8'))
+                # print('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words))
+
+        else:
+            for k, (img_rgb, AB_val) in enumerate(zip(img_rgbs, AB_vals)):
+                AB_val = cv2.resize(AB_val, (224, 224),
+                interpolation=cv2.INTER_CUBIC)
+                img_dec = labim2rgb(np.dstack((np.expand_dims(img_labs[k, :, :, 0], axis=2), AB_val)))
+
+                val_loss += error_metric(img_dec, img_rgb)
+                if k == 0 and i%save_every == 0:
+
+                    word_list = list(input_captions_[k, :input_lengths_[k]])     
+                    words = '_'.join(vrev.get(w, 'unk') for w in word_list) 
+
+                    img_labs_tosave = labim2rgb(img_labs[k])
+                    cv2.imwrite('%s/%d_%d_bw.jpg'%(img_save_folder, epoch, i),
+                    cv2.cvtColor(img_rgbs[k].astype('uint8'), 
+                    cv2.COLOR_RGB2GRAY))
+                    cv2.imwrite('%s/%d_%d_color.jpg'%(img_save_folder, epoch, i),
+                    img_rgbs[k].astype('uint8'))
+                    cv2.imwrite('%s/%d_%d_rec_%s.jpg'%(img_save_folder, epoch, i, words),
+                    img_dec.astype('uint8'))
 
     return val_loss / len(val_minibatches) # , val_masked_loss / len(val_minibatches)
 
@@ -369,6 +398,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_save_file', help='prefix of the model save file')
     parser.add_argument('--save_attention_maps', default=0, help='save maps as well')
     parser.add_argument('--load_path', type=str)
+    parser.add_argument('--test_path', type=str)
 
     # parser.add_argument('--data_size', default=1024, type=int)
     args = parser.parse_args()
@@ -494,7 +524,7 @@ if __name__ == '__main__':
         os.makedirs(img_save_folder)                                    
 
     print (img_save_folder)
-    print ('start training ....')
+    
 
 
     epoch_base = 0
@@ -503,21 +533,28 @@ if __name__ == '__main__':
         epoch_base = load_epoch
 
     print(epoch_base + args.start_epoch, epoch_base + args.end_epoch)
-    
-    for epoch in range(epoch_base + args.start_epoch, epoch_base + args.end_epoch):
-        random.shuffle(minibatches)
-        random.shuffle(val_minibatches)
 
-        net = train(minibatches, net, optimizer, epoch, gradient_prior_factor,
-            img_save_folder)
-        t = time.time()
-        if args.save_attention_maps == 0:
-            val_full_loss = evaluate(val_minibatches, net, epoch, val_img_save_folder)
-        else:
-            val_full_loss = evaluate_attention_maps(val_minibatches, net, epoch, val_img_save_folder)
-        print ('full image rmse: %f' % (val_full_loss))
+    if args.test_path:
+        print ('start testing ....')
+        if not os.path.exists(args.test_path):
+            os.makedirs(args.test_path)            
+        evaluate(val_minibatches, net, epoch_base, args.test_path, is_test=True, val_loaded_file_ids=val_loaded_file_ids)
+    else:
+        print ('start training ....')
+        for epoch in range(epoch_base + args.start_epoch, epoch_base + args.end_epoch):
+            random.shuffle(minibatches)
+            random.shuffle(val_minibatches)
+
+            net = train(minibatches, net, optimizer, epoch, gradient_prior_factor,
+                img_save_folder)
+            t = time.time()
+            if args.save_attention_maps == 0:
+                val_full_loss = evaluate(val_minibatches, net, epoch, val_img_save_folder)
+            else:
+                val_full_loss = evaluate_attention_maps(val_minibatches, net, epoch, val_img_save_folder)
+            print ('full image rmse: %f' % (val_full_loss))
 
 
-        
+            
 
 
